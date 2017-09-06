@@ -3,9 +3,10 @@
 using namespace std;
 
 #define f(in,to) for (int i = in; i < to; i++)
+#define g(in,to) for (int j = in; j < to; j++)
 
 int num = 0;
-vector<vector<int> > vertices; 
+vector<vector<int> > vertices; // vetor com a lista de adjacencias dos vertices
 set<int> articulation_points; // conjunto com os pontos de articulação do grafo
 /*
     low = low do vertice, ex: low[5] = 0
@@ -14,73 +15,45 @@ set<int> articulation_points; // conjunto com os pontos de articulação do graf
 */
 int *low, *d, *vis;
 
-bool root_articulation(int v) {
+bool root_articulation(int v, int tam) {
     // utilizado para saber se a raiz é um ponto de articulação
     int art = 0;
-    f(0, vertices[v].size()) {
+    f(0, tam) {
         art += low[vertices[v][i]];
     }
-    // a raiz é um ponto de articulação apenas se tiver pelo menos vertice vizinho a ela com low diferente do low da raiz
-    return art != (low[v]*vertices[v].size());
+    // a raiz é um ponto de articulação apenas se tiver pelo menos um vertice vizinho a ela com low diferente do low da raiz
+    return art != (low[v]*tam);
 }
 
-int dfs(int v, int pai, int raiz) {
-    // DFS para encontrar os pontos de articulação do grafo
+int grafo(int v, int pai, int raiz) {
+    // utilizado para encontrar os pontos de articulação e os componentes biconexos do grafo
     low[v] = d[v] = num++;
     vis[v] = 1;
     f(0,vertices[v].size()) {
         // utilizado para visitar todas os vertices que tem arestas saindo de v
         if (vis[vertices[v][i]] == -1) {
-            dfs(vertices[v][i], v, raiz);
+            grafo(vertices[v][i], v, raiz);
             low[v] = min(low[v], low[vertices[v][i]]);
-            cout << "(" << v+1 << ", " << vertices[v][i] + 1 << ")" << endl;
-            if ((low[vertices[v][i]] >= d[v] && v != raiz) || (v == raiz && root_articulation(v))) {
+            cout << "(" << v + 1 << ", " << vertices[v][i] + 1 << ") ";
+            if (((low[vertices[v][i]] >= d[v] && v != raiz) || (v == raiz && root_articulation(v, i + 1))) && d[v] != low[vertices[v][i]]) {
                 // verificando se o vertice é um ponto de articulação
                 articulation_points.insert(v);
-                cout << endl;
+                cout << "." << endl;
             }
         } else if(vis[vertices[v][i]] == 2){
-            cout << "(" << v+1 << ", " << vertices[v][i] + 1 << ")" << endl;
+            // utilizado quando existe circulos no grafo
+            cout << "(" << v+1 << ", " << vertices[v][i] + 1 << ") ";
+            if (((low[vertices[v][i]] >= d[v] && v != raiz) || (v == raiz && root_articulation(v, i + 1)))) {
+                // verificando se o vertice é um ponto de articulação
+                articulation_points.insert(v);
+                cout << "." << endl;
+            }
             if(vertices[v][i] != pai){
                 low[v] = min(low[v], d[vertices[v][i]]);
             }
         } else if(vertices[v][i] != pai){
             low[v] = min(low[v], d[vertices[v][i]]);
         }
-    }
-    vis[v] = 2;
-}
-
-set<int> component;
-
-int biconnect(int v, int pai) {
-    // utilizado para encontrar os componentes biconexos
-    vis[v] = 1;
-    f(0,vertices[v].size()) {
-        // utilizado para visitar todos os vertices que tem arestas saindo de v
-        if (vis[vertices[v][i]] == -1) {           
-            // if (vertices[vertices[v][i]].size() <= 1) {
-                // cout << vertices[v][i] + 1 << endl;
-                // component.insert(vertices[v][i] + 1);
-            // }
-            biconnect(vertices[v][i], v);
-            // component.insert(v+1);
-            cout << "(" << v+1 << ", " << vertices[v][i] + 1 << ")" << endl;
-            if (articulation_points.find(v) != articulation_points.end()) {
-                // se v for um ponto de articulação, então v vai está nos dois componentes biconexos
-                // e já pode imprimir os vertices do componente biconexo
-                // component.insert(v + 1);
-                // for (set<int>::iterator it = component.begin(); it!=component.end();it++) {
-                //     cout << *it << endl;
-                // }
-                cout << endl;
-                // component.clear();
-                // component.insert(v + 1);
-            }
-        }
-        else if(vis[vertices[v][i]] == 2){
-           cout << "(" << v+1 << ", " << vertices[v][i] + 1 << ")" << endl;
-       }
     }
     vis[v] = 2;
 }
@@ -97,33 +70,34 @@ int main() {
         d = (int*)malloc(v*sizeof(int));
         vis = (int*)malloc(v*sizeof(int));
         num = 0;
-        f(0, v) {
-            low[i] = d[i] = vis[i] = -1;
+        g(0, v) {
+            low[j] = d[j] = vis[j] = -1;
         }
         int root = -1;
-        f(0,e) {
+        g(0,e) {
             int u, v;
             cin >> u >> v;
             if (root == -1) root = u - 1;
             vertices[u-1].push_back(v-1);
             vertices[v-1].push_back(u-1);
         }
-        dfs(root, -1, root);
-        if (root_articulation(root)) articulation_points.insert(root);
-        cout << "pontos: " << articulation_points.size() << endl;
-
-        f(0,v) {
-            vis[i] = -1;
+        cout << "O grafo " << i + 1 << " contém os seguintes componentes biconexos" << endl;
+        grafo(root, -1, root);
+        if (articulation_points.find(root) == articulation_points.end()) cout << "." << endl;
+        cout << endl;
+        cout << "O grafo " << i + 1 << " contém os seguintes vértices de articulação" << endl;
+        
+        for(set<int>::iterator it = articulation_points.begin();it!=articulation_points.end();it++) {
+            // implimindo os pontos de articulação do grafo
+            cout << *it  + 1 << endl;
         }
-        // biconnect(root, -1);
+        cout << endl;
+
+        g(0,v) {
+            vis[j] = -1;
+        }
 
         vertices.clear();
-        // if(component.size() > 1) {
-        //     for (set<int>::iterator it = component.begin(); it!=component.end();it++) {
-        //         cout << *it << endl;
-        //     }
-        // }
-        component.clear();
         articulation_points.clear();
     }
 }
